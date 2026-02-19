@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ئەپڵیکەیشنی ئەنیمەیشنەکان</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3498db">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
     <style>
         body { 
             font-family: 'Tahoma', 'Arial', sans-serif; 
@@ -14,10 +19,15 @@
             flex-direction: column; 
             align-items: center; 
         }
-        h1 { color: #2c3e50; margin-bottom: 30px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+        h1 { 
+            color: #2c3e50; 
+            margin-bottom: 30px; 
+            text-align: center;
+            font-size: 24px;
+        }
         .grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
             gap: 15px; 
             width: 100%; 
             max-width: 900px; 
@@ -37,6 +47,7 @@
             align-items: center;
             justify-content: center;
             line-height: 1.4;
+            min-height: 60px;
         }
         .btn:hover { 
             background-color: #3498db; 
@@ -48,12 +59,13 @@
 </head>
 <body>
 
-    <h1>ئەپڵیکەیشنی ئەنیمەیشنەکان</h1>
+    <h1>لیستی ئەنیمەیشنەکان</h1>
 
-    <div class="grid" id="main-menu"></div>
+    <div class="grid" id="main-menu">
+        </div>
 
     <script>
-        // ناوەکان ڕێک بەو شێوەیەی کە ناردت
+        // لیستی ناوی فایلەکانت ڕێک وەک خۆیان
         const fileNames = [
             "میلەکانی سەعات",
             "قوڕی تایە",
@@ -72,7 +84,7 @@
 
         fileNames.forEach(name => {
             const a = document.createElement('a');
-            // زۆر گرنگە: لێرە فایلەکە دەدۆزێتەوە
+            // ئەم بەشە ناوی فایلەکە دەبەستێتەوە بە .html
             a.href = encodeURIComponent(name) + ".html"; 
             a.className = "btn";
             a.innerText = name; 
