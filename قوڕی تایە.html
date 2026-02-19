@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>فیزیا: جوڵەی خولانەوە</title>
+    <style>
+        :root {
+            --bg: #e0f2fe;
+            --panel: #ffffff;
+            --text-dark: #075985;
+            --mud: #5d2b06;
+            --designer-color: #ef4444; /* ڕەنگی سوور بۆ ناوەکە */
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--bg);
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+
+        #app:fullscreen { background-color: var(--bg); }
+
+        .info-card {
+            background: var(--panel); padding: 10px 15px;
+            margin: 5px auto; border-radius: 8px;
+            border-right: 5px solid var(--text-dark);
+            font-size: 14px; color: #1e293b;
+            width: 90%; max-width: 500px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 40;
+        }
+
+        .main-stage {
+            flex: 1; position: relative;
+            width: 100%; overflow: hidden;
+        }
+
+        canvas {
+            display: block; touch-action: none;
+            width: 100%; height: 100%;
+        }
+
+        .bottom-bar {
+            height: 75px; background: var(--panel);
+            display: flex; justify-content: space-around;
+            padding: 0 15px; gap: 10px; align-items: center;
+            width: 100%; box-sizing: border-box;
+            border-top: 3px solid #bae6fd; z-index: 50;
+            flex-shrink: 0; position: relative;
+        }
+
+        /* ستایڵی ناوی دیزاینەر */
+        .designer-name {
+            position: absolute; bottom: 85px; left: 15px;
+            color: var(--designer-color); font-weight: bold;
+            font-size: 14px; text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+            z-index: 60; pointer-events: none;
+        }
+
+        button {
+            padding: 10px 18px; border: none; border-radius: 8px;
+            cursor: pointer; font-weight: bold; font-size: 14px;
+            background: var(--text-dark); color: white;
+            white-space: nowrap;
+        }
+
+        .slider-box { 
+            display: flex; align-items: center; gap: 8px; 
+            color: var(--text-dark); font-weight: bold;
+            flex-grow: 1; justify-content: center;
+        }
+
+        input[type=range] { width: 140px; cursor: pointer; }
+
+        @media (orientation: landscape) {
+            .info-card { 
+                position: absolute; top: 10px; right: 10px; 
+                width: 220px; font-size: 12px; margin: 0; 
+            }
+            .bottom-bar { height: 65px; }
+            .designer-name { bottom: 75px; left: 10px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="info-card" id="explanationCard">
+    <b>ڕوونکردنەوە:</b> کاتێک خێرایی زیاد دەکات، چەقەهێزی پێویست دروست نابێت، بۆیە قوڕەکە بە ئاراستەی <b>لێکەوت</b> دەردەپەڕێت.
+</div>
+
+<div class="main-stage" id="app">
+    <div class="designer-name">BY: Rzgar Saeed</div>
+    <canvas id="physicsCanvas"></canvas>
+</div>
+
+<div class="bottom-bar">
+    <div class="slider-box">
+        <span>خێرایی:</span>
+        <input type="range" id="speedSlider" min="0" max="5" step="0.2" value="1">
+    </div>
+    <button onclick="toggleFS()">پڕاوپڕ ⛶</button>
+</div>
+
+<script>
+    const canvas = document.getElementById('physicsCanvas');
+    const ctx = canvas.getContext('2d');
+    const speedSlider = document.getElementById('speedSlider');
+    const expCard = document.getElementById('explanationCard');
+    const app = document.getElementById('app');
+
+    let angle = 0;
+    let mudParticles = [];
+    let tireR;
+
+    function resize() {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+        const minDim = Math.min(canvas.width, canvas.height);
+        tireR = minDim * 0.38; 
+    }
+
+    window.addEventListener('resize', resize);
+    window.addEventListener('load', resize);
+
+    class Mud {
+        constructor(x, y, ang, speed) {
+            this.x = x; this.y = y;
+            const vMag = speed * 140; 
+            this.vx = Math.cos(ang + Math.PI/2) * vMag;
+            this.vy = Math.sin(ang + Math.PI/2) * vMag;
+            this.life = 1.0;
+            this.size = tireR * 0.13; 
+        }
+        update() { this.x += this.vx; this.y += this.vy; this.life -= 0.015; }
+        draw() {
+            ctx.fillStyle = `rgba(93, 43, 6, ${this.life})`;
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill();
+        }
+    }
+
+    function createAutoMud(speed, cy) {
+        const cx = canvas.width / 2;
+        const mx = cx + Math.cos(angle) * tireR;
+        const my = cy + Math.sin(angle) * tireR;
+        mudParticles.push(new Mud(mx, my, angle, speed * 0.05));
+    }
+
+    function updateExplanation(speed) {
+        if (speed === 0) {
+            expCard.innerHTML = "<b>تایەکە وەستاوە:</b> هێزی بەیەکانوسان قوڕەکەی گرتووە.";
+        } else if (speed < 2.5) {
+            expCard.innerHTML = "<b>خێرایی کەم:</b> هێزی بەیەکانوسان هێشتا بەسە بۆ دابینکردنی چەقەهێز.";
+        } else {
+            expCard.innerHTML = "<b>خێرایی زۆر:</b> چەقەهێزی پێویست نییە، قوڕەکە بە <b>لێکەوت</b> دەردەپەڕێت.";
+        }
+    }
+
+    function toggleFS() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(e => console.log(e));
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    function drawTire(cx, cy) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.arc(0, 0, tireR, 0, Math.PI*2);
+        ctx.strokeStyle = '#0f172a'; ctx.lineWidth = tireR * 0.38; ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, 0, tireR * 0.78, 0, Math.PI*2);
+        ctx.fillStyle = '#cbd5e1'; ctx.fill();
+        ctx.strokeStyle = '#475569'; ctx.lineWidth = 4; ctx.stroke();
+        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = tireR * 0.08;
+        for(let i=0; i<6; i++) {
+            ctx.rotate((Math.PI*2)/6);
+            ctx.beginPath(); ctx.moveTo(tireR*0.1, 0); ctx.lineTo(tireR * 0.75, 0); ctx.stroke();
+            ctx.beginPath(); ctx.arc(tireR*0.4, 0, tireR*0.12, 0, Math.PI*2); 
+            ctx.fillStyle="#94a3b8"; ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const cx = canvas.width / 2;
+        // هێنانە خوارەوەی کەمێک زیاتر لە هەردوو دۆخەکەدا
+        const cy = window.innerWidth > window.innerHeight ? canvas.height / 2.0 : canvas.height / 1.85;
+        
+        const speed = parseFloat(speedSlider.value);
+        angle += speed * 0.05;
+
+        updateExplanation(speed);
+        drawTire(cx, cy);
+
+        if(speed > 2.6 && Math.random() > 0.94) createAutoMud(speed, cy);
+
+        mudParticles = mudParticles.filter(p => p.life > 0);
+        mudParticles.forEach(p => { p.update(); p.draw(); });
+
+        requestAnimationFrame(animate);
+    }
+
+    resize();
+    animate();
+</script>
+</body>
+</html>

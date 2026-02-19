@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جوڵەی شاوڵی - Rzgar Saeed</title>
+    <style>
+        :root {
+            --bg-color: #f5f5dc;
+            --main-brown: #5d4037;
+            --path-color: #00008b;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: row-reverse;
+        }
+
+        /* پانێڵی لای ڕاست */
+        .info-panel {
+            width: 300px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            background: rgba(0,0,0,0.03);
+            border-right: 2px solid rgba(0,0,0,0.1);
+            z-index: 100;
+            box-sizing: border-box;
+        }
+
+        /* بەشی ئەنیمەیشن - ناوەڕاستکردنی وێنە بچووکەکە */
+        .animation-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .formula-card {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 90%;
+            border: 2px solid var(--main-brown);
+            margin-bottom: 20px;
+        }
+
+        .pos-title { font-weight: bold; color: #d35400; font-size: 1.2rem; margin-bottom: 5px; }
+        .math-display { font-family: "Times New Roman", Times, serif; font-size: 1.9rem; direction: ltr; font-weight: bold; }
+
+        /* قەبارەی بچووک و گونجاو */
+        .viz-box { 
+            position: relative; 
+            width: 280px; 
+            height: 280px; 
+        } 
+        
+        .circular-path {
+            position: absolute; width: 100%; height: 100%;
+            border: 2px dashed var(--path-color); border-radius: 50%; opacity: 0.3;
+        }
+        
+        .center-point {
+            position: absolute; top: 50%; left: 50%;
+            width: 10px; height: 10px; background: var(--main-brown);
+            border-radius: 50%; transform: translate(-50%, -50%);
+        }
+        
+        #pendulum-arm {
+            position: absolute; top: 50%; left: 50%;
+            width: 3px; 
+            height: 140px; /* کورتکردنەوەی پەتەکە */
+            background: #333;
+            transform-origin: top center;
+            transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translate(-50%, 0) rotate(0deg); 
+        }
+        
+        .ball {
+            width: 28px; height: 28px; background: #e74c3c;
+            border-radius: 50%; position: absolute; bottom: -14px; left: -12.5px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .footer-controls { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            width: 100%; 
+            align-items: center;
+        }
+
+        .btn { padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 85%; font-size: 0.9rem; }
+        .play-btn { background: #27ae60; color: white; }
+        .play-btn.paused { background: #e67e22; }
+        .full-btn { background: var(--main-brown); color: white; }
+        
+        .credit-text { 
+            font-weight: bold; 
+            color: var(--main-brown); 
+            font-size: 1.1rem; 
+            margin-top: 15px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            width: 80%;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="info-panel">
+        <div class="formula-card">
+            <div id="locationName" class="pos-title">نزمترین خاڵ</div>
+            <div id="equation" class="math-display">F<sub>c</sub> = F<sub>T</sub> - F<sub>g</sub></div>
+        </div>
+
+        <div class="footer-controls">
+            <button id="toggleBtn" class="btn play-btn" onclick="togglePlay()">وەستان ⏸</button>
+            <button class="btn full-btn" onclick="toggleFullScreen()">Full Screen ⛶</button>
+            <div class="credit-text">BY: Rzgar Saeed</div>
+        </div>
+    </div>
+
+    <div class="animation-container">
+        <div class="viz-box">
+            <div class="circular-path"></div>
+            <div class="center-point"></div>
+            <div id="pendulum-arm">
+                <div class="ball"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const arm = document.getElementById('pendulum-arm');
+        const locLabel = document.getElementById('locationName');
+        const eqLabel = document.getElementById('equation');
+        const toggleBtn = document.getElementById('toggleBtn');
+
+        let isRunning = true;
+        let stepIndex = 0; 
+        let timer = null;
+
+        const phases = [
+            { deg: 0,    name: "نزمترین خاڵ",   math: "F<sub>c</sub> = F<sub>T</sub> - F<sub>g</sub>" },
+            { deg: 90,   name: "لای چەپ",     math: "F<sub>c</sub> = F<sub>T</sub>" }, 
+            { deg: 180,  name: "بەرزترین خاڵ", math: "F<sub>c</sub> = F<sub>T</sub> + F<sub>g</sub>" },
+            { deg: 270,  name: "لای ڕاست",     math: "F<sub>c</sub> = F<sub>T</sub>" }  
+        ];
+
+        function updateDisplay() {
+            if (!isRunning) return;
+
+            const current = phases[stepIndex];
+            arm.style.transform = `translate(-50%, 0) rotate(${current.deg}deg)`;
+            locLabel.innerText = current.name;
+            eqLabel.innerHTML = current.math;
+
+            stepIndex = (stepIndex + 1) % phases.length;
+            timer = setTimeout(updateDisplay, 4500);
+        }
+
+        function togglePlay() {
+            if (isRunning) {
+                isRunning = false;
+                toggleBtn.innerText = "دەستپێکردنەوە ▶";
+                toggleBtn.classList.add('paused');
+                clearTimeout(timer);
+            } else {
+                isRunning = true;
+                toggleBtn.innerText = "وەستان ⏸";
+                toggleBtn.classList.remove('paused');
+                updateDisplay();
+            }
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else document.exitFullscreen();
+        }
+
+        updateDisplay();
+    </script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ئەنیمەیشنی ڕۆتۆر - Rzgar Saeed</title>
+    <style>
+        :root {
+            --bg-color: #f5f5dc;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            background-color: var(--bg-color);
+            color: #333;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            overflow: hidden;
+        }
+
+        /* لای تەنیشتی چەپ */
+        .side-left {
+            position: absolute;
+            left: 20px;
+            bottom: 20px;
+            z-index: 100;
+        }
+
+        /* لای تەنیشتی ڕاست */
+        .side-right {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            z-index: 100;
+        }
+
+        .credit { font-weight: bold; color: #5d4037; font-size: 1.1rem; }
+        .fs-btn { padding: 10px 18px; background: #5d4037; border: none; border-radius: 5px; color: white; cursor: pointer; font-weight: bold; }
+
+        .main-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1500px;
+            touch-action: none;
+        }
+
+        .scene {
+            width: 300px;
+            height: 260px;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: rotateX(-10deg);
+        }
+
+        .cylinder {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            transform-style: preserve-3d;
+            animation: rotateCylinder 3s linear infinite;
+        }
+
+        @keyframes rotateCylinder {
+            from { transform: rotateY(0deg); }
+            to { transform: rotateY(360deg); }
+        }
+
+        .wall-segment {
+            position: absolute;
+            width: 28px;
+            height: 100%;
+            left: 136px;
+            background: linear-gradient(to bottom, rgba(0, 160, 255, 0.25), rgba(0, 160, 255, 0.05));
+            border-left: 0.3px solid rgba(0, 150, 255, 0.2);
+        }
+
+        .cartoon-person {
+            position: absolute;
+            width: 40px;
+            height: 100px;
+            left: 130px;
+            bottom: 5px;
+            transform: rotateY(0deg) translateZ(148px);
+            transform-style: preserve-3d;
+        }
+
+        .head { width: 22px; height: 22px; background: #ffdbac; border-radius: 50%; margin: 0 auto; border: 1px solid #333; }
+        .body { width: 30px; height: 45px; background: #e74c3c; border-radius: 5px; margin: 2px auto; position: relative; }
+        .arm { position: absolute; width: 8px; height: 35px; background: #e74c3c; top: 5px; }
+        .arm.left { left: -8px; transform: rotate(20deg); }
+        .arm.right { right: -8px; transform: rotate(-20deg); }
+        .leg { position: absolute; width: 10px; height: 40px; background: #2c3e50; bottom: -38px; }
+        .leg.left { left: 3px; }
+        .leg.right { right: 3px; }
+
+        .floor {
+            position: absolute;
+            width: 310px; height: 310px;
+            background: radial-gradient(circle, #4e342e, #211510);
+            border: 4px solid #1a0f0a;
+            border-radius: 50%;
+            left: -5px;
+            bottom: -155px; 
+            transform: rotateX(90deg);
+            transition: transform 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .scene.dropped .floor {
+            transform: rotateX(90deg) translateZ(-500px);
+        }
+
+        @media (orientation: landscape) {
+            .scene { transform: scale(0.85) rotateX(-10deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container" onclick="toggleFloor()">
+        <div class="scene" id="mainScene">
+            <div class="floor"></div>
+            <div class="cylinder" id="cylinder">
+                <div class="cartoon-person">
+                    <div class="head"></div>
+                    <div class="body">
+                        <div class="arm left"></div>
+                        <div class="arm right"></div>
+                        <div class="leg left"></div>
+                        <div class="leg right"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="side-left">
+        <button class="fs-btn" onclick="toggleFullScreen()">Full Screen ⛶</button>
+    </div>
+
+    <div class="side-right">
+        <div class="credit">BY: Rzgar Saeed</div>
+    </div>
+
+    <script>
+        const cylinder = document.getElementById('cylinder');
+        for (let i = 0; i < 36; i++) {
+            const wall = document.createElement('div');
+            wall.className = 'wall-segment';
+            wall.style.transform = `rotateY(${i * 10}deg) translateZ(150px)`;
+            cylinder.appendChild(wall);
+        }
+
+        function toggleFloor() {
+            document.getElementById('mainScene').classList.toggle('dropped');
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+    </script>
+</body>
+</html>

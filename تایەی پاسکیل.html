@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ku">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bicycle Wheel - Rzgar Saeed</title>
+    <style>
+        :root {
+            --bg-start: #87CEEB;
+            --bg-end: #00BFFF;
+            --main-dark: #0f172a;
+        }
+
+        * { box-sizing: border-box; touch-action: none; }
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background: linear-gradient(180deg, var(--bg-start) 0%, var(--bg-end) 100%);
+        }
+
+        /* چاککردنی باکگراوند لە کاتی فوول سکرین */
+        .main-wrapper:fullscreen, .main-wrapper:-webkit-full-screen {
+            background: linear-gradient(180deg, var(--bg-start) 0%, var(--bg-end) 100%) !important;
+            width: 100vw; height: 100vh;
+        }
+
+        .main-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 10px;
+            background: linear-gradient(180deg, var(--bg-start) 0%, var(--bg-end) 100%);
+        }
+
+        #fsBtn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 100;
+            padding: 8px 15px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid var(--main-dark);
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .header {
+            text-align: center;
+            z-index: 10;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: clamp(20px, 6vw, 32px);
+            color: var(--main-dark);
+            text-transform: uppercase;
+            font-weight: 900;
+        }
+
+        /* بەشی تایەکە */
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            /* بەکارهێنانی vmin بۆ ئەوەی لە هەردوو دۆخی شاشەدا جێگەی ببێتەوە */
+            width: 80vmin;
+            height: 80vmin;
+            filter: drop-shadow(0 20px 40px rgba(0,0,0,0.4));
+            cursor: grab;
+        }
+
+        .footer {
+            text-align: center;
+            padding-bottom: 10px;
+        }
+
+        .signature {
+            font-size: clamp(18px, 5vw, 26px);
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin: 0;
+        }
+
+        /* ڕێکخستنی Landscape */
+        @media (orientation: landscape) {
+            .main-wrapper {
+                flex-direction: row;
+                padding: 10px 40px;
+            }
+            .header, .footer {
+                width: 30%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+            .canvas-container {
+                width: 40%;
+            }
+            canvas {
+                width: 70vmin;
+                height: 70vmin;
+            }
+            #fsBtn { top: 15px; left: 15px; right: auto; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-wrapper" id="mainApp">
+    <button id="fsBtn" onclick="toggleFS()">FULL SCREEN</button>
+
+    <div class="header">
+        <h1>Bicycle Wheel</h1>
+        <p style="color: var(--main-dark); font-size: 14px; margin: 5px 0; font-weight: bold;">ڕایبکێشە بۆ سوڕاندن</p>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="wheelCanvas"></canvas>
+    </div>
+
+    <div class="footer">
+        <p class="signature">BY: Rzgar Saeed</p>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('wheelCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // ڕێکخستنی ناوەکی کانڤاس (Resolution)
+    function setupCanvas() {
+        canvas.width = 800;
+        canvas.height = 800;
+    }
+    setupCanvas();
+
+    let angle = 0;
+    let angularVelocity = 0;
+    let friction = 0.985;
+    let isDragging = false;
+    let lastAngle = 0;
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        const r = 340; // گەورەتر کردنی تایەکە لە ناو کانیڤاسەکە
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+
+        // 1. Tire (ڕەشی تۆخ)
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.lineWidth = 35; ctx.strokeStyle = '#000'; ctx.stroke();
+
+        // 2. Rim (زیوی گەش)
+        ctx.beginPath(); ctx.arc(0, 0, r - 18, 0, Math.PI * 2);
+        ctx.lineWidth = 15; ctx.strokeStyle = '#f8fafc'; ctx.stroke();
+
+        // 3. Spokes (تەلەکان)
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 2;
+        for (let i = 0; i < 36; i++) {
+            let a = (i * Math.PI * 2) / 36;
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * (r - 20), Math.sin(a) * (r - 20));
+            ctx.stroke();
+        }
+
+        // 4. Hub (سەنتەر)
+        ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2);
+        ctx.fillStyle = '#334155'; ctx.fill();
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.stroke();
+
+        // 5. Valve (وەلەف بۆ ئەوەی جوڵە دیار بێت)
+        ctx.fillStyle = '#ff0000'; ctx.fillRect(r - 30, -6, 18, 12);
+        ctx.restore();
+
+        if (!isDragging) {
+            angle += angularVelocity;
+            angularVelocity *= friction;
+            if (Math.abs(angularVelocity) < 0.0001) angularVelocity = 0;
+        }
+        requestAnimationFrame(draw);
+    }
+
+    function getAngle(e) {
+        const rect = canvas.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const clientX = (e.touches ? e.touches[0].clientX : e.clientX);
+        const clientY = (e.touches ? e.touches[0].clientY : e.clientY);
+        return Math.atan2(clientY - cy, clientX - cx);
+    }
+
+    const start = (e) => { isDragging = true; lastAngle = getAngle(e); angularVelocity = 0; };
+    const move = (e) => {
+        if (!isDragging) return;
+        const cur = getAngle(e);
+        let diff = cur - lastAngle;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        angle += diff;
+        angularVelocity = diff;
+        lastAngle = cur;
+    };
+    const end = () => isDragging = false;
+
+    canvas.addEventListener('mousedown', start);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start, {passive: false});
+    window.addEventListener('touchmove', move, {passive: false});
+    window.addEventListener('touchend', end);
+
+    function toggleFS() {
+        const app = document.getElementById('mainApp');
+        if (!document.fullscreenElement) {
+            app.requestFullscreen().catch(err => alert(err.message));
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    draw();
+</script>
+
+</body>
+</html>

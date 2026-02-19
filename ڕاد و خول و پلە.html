@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ku">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bicycle Animation - Rzgar Saeed</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --accent: #38bdf8;
+            --gold: #fbbf24;
+            /* کۆدی شینی ئاسمانی */
+            --sky-blue-fill: #00BFFF22; 
+        }
+
+        * { box-sizing: border-box; touch-action: none; }
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            background-color: var(--bg-color);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            overflow: hidden;
+            direction: rtl;
+        }
+
+        .wrapper {
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            background-color: var(--bg-color);
+        }
+
+        #fsBtn {
+            position: absolute;
+            top: 10px; right: 10px;
+            z-index: 100;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .canvas-area {
+            flex: 2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        canvas {
+            max-width: 95%;
+            max-height: 95%;
+            aspect-ratio: 1 / 1;
+            background-color: var(--panel-bg);
+            border-radius: 50%;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+        }
+
+        .stats-panel {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .stat-box {
+            background: var(--panel-bg);
+            padding: 10px;
+            border-radius: 10px;
+            border-bottom: 3px solid var(--accent);
+            flex: 1;
+            max-width: 110px;
+            text-align: center;
+        }
+
+        .stat-val { display: block; font-size: 16px; font-weight: bold; color: var(--accent); direction: ltr; }
+        .stat-lbl { display: block; font-size: 12px; color: #94a3b8; margin-top: 5px; }
+
+        .footer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+        }
+
+        .btn-group { display: flex; gap: 8px; width: 100%; max-width: 350px; }
+        .btn-group button {
+            flex: 1; padding: 12px; border: none; border-radius: 8px;
+            font-weight: bold; cursor: pointer; font-size: 13px;
+        }
+        #toggleBtn { background: var(--accent); color: var(--bg-color); }
+        #resetBtn { background: #e11d48; color: white; }
+
+        .signature { font-size: 22px; color: var(--gold); font-weight: bold; }
+
+        @media (orientation: landscape) {
+            .wrapper { flex-direction: row; padding: 10px 30px; }
+            .main-content { flex-direction: row; width: 100%; gap: 10px; }
+            .canvas-area { flex: 1.2; order: 2; }
+            .stats-panel { flex: 0.8; flex-direction: column; order: 1; align-items: flex-start; }
+            .footer { flex: 0.8; order: 3; justify-content: center; }
+            .stat-box { width: 140px; max-width: none; }
+            .btn-group { flex-direction: column; width: 140px; }
+            #fsBtn { right: auto; left: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="wrapper" id="mainApp">
+    <button id="fsBtn" onclick="toggleFS()">پڕاوپڕ</button>
+
+    <div class="main-content">
+        <div class="stats-panel">
+            <div class="stat-box">
+                <span class="stat-val" id="degDisplay">0°</span>
+                <span class="stat-lbl">پلە</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-val" id="radDisplay">0.00 π</span>
+                <span class="stat-lbl">ڕاد</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-val" id="revDisplay">0.00</span>
+                <span class="stat-lbl">ژ.خول</span>
+            </div>
+        </div>
+
+        <div class="canvas-area">
+            <canvas id="carCanvas"></canvas>
+        </div>
+
+        <div class="footer">
+            <div class="btn-group">
+                <button id="toggleBtn">دەستپێکردن / وەستان</button>
+                <button id="resetBtn">سەرەتا</button>
+            </div>
+            <div class="signature">BY: Rzgar Saeed</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('carCanvas');
+    const ctx = canvas.getContext('2d');
+    const btn = document.getElementById('toggleBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    const degDisp = document.getElementById('degDisplay');
+    const radDisp = document.getElementById('radDisplay');
+    const revDisp = document.getElementById('revDisplay');
+
+    let angle = 0;
+    let speed = 0.004;
+    let isRunning = true;
+    let isPausedForTime = false;
+    let reqId;
+    let radius, centerX, centerY;
+
+    function resize() {
+        canvas.width = 600;
+        canvas.height = 600;
+        centerX = canvas.width / 2;
+        centerY = canvas.height / 2;
+        radius = 200; 
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    const pausePoints = [Math.PI / 2, Math.PI, (3 * Math.PI) / 2, Math.PI * 2];
+    let reachedPoints = [];
+
+    function updateStats() {
+        degDisp.innerText = `${(angle * 180 / Math.PI).toFixed(0)}°`;
+        radDisp.innerText = `${(angle / Math.PI).toFixed(2)} π`;
+        revDisp.innerText = `${(angle / (Math.PI * 2)).toFixed(2)}`;
+    }
+
+    function toggleFS() {
+        const app = document.getElementById('mainApp');
+        if (!document.fullscreenElement) {
+            app.requestFullscreen().catch(err => console.log(err));
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    function drawBicycleAndRider(x, y, currentAngle) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(currentAngle + Math.PI / 2); 
+
+        // Bicycle
+        ctx.strokeStyle = "#ffff00";
+        ctx.lineWidth = 6;
+        ctx.lineCap = "round";
+        ctx.beginPath(); ctx.arc(-28, 0, 16, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(28, 0, 16, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-28, 0); ctx.lineTo(0, -22); ctx.lineTo(28, 0); ctx.stroke();
+
+        // Rider
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(10, -50); ctx.stroke();
+        
+        // Head (سەری پاسکیلسوار بە ڕوونی)
+        ctx.beginPath();
+        ctx.arc(15, -62, 12, 0, Math.PI * 2); 
+        ctx.fillStyle = "#ffffff"; 
+        ctx.fill();
+
+        ctx.beginPath(); ctx.moveTo(10, -42); ctx.lineTo(25, -28); ctx.stroke();
+        ctx.restore();
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Track
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+        ctx.lineWidth = 5;
+        ctx.stroke();
+
+        // Progress Area - ڕەنگی شینی ئاسمانی تۆختر بە بەکارهێنانی HEX
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, 0, angle);
+        ctx.fillStyle = "#00BFFF22"; // 00BFFF ڕەنگی Deep Sky Blue یە و 22 ئاستی شەفافییەتەکەیەتی
+        ctx.fill();
+
+        let x = centerX + radius * Math.cos(angle);
+        let y = centerY + radius * Math.sin(angle);
+        
+        drawBicycleAndRider(x, y, angle);
+        updateStats();
+
+        pausePoints.forEach(p => {
+            if (angle >= p && !reachedPoints.includes(p)) {
+                isPausedForTime = true;
+                reachedPoints.push(p);
+                setTimeout(() => { isPausedForTime = false; if(isRunning) draw(); }, 4000);
+            }
+        });
+
+        if (isRunning) {
+            if (!isPausedForTime && angle <= Math.PI * 2) {
+                angle += speed;
+            }
+            reqId = requestAnimationFrame(draw);
+        }
+    }
+
+    btn.addEventListener('click', () => {
+        isRunning = !isRunning;
+        if (isRunning) draw();
+    });
+
+    resetBtn.addEventListener('click', () => {
+        angle = 0; reachedPoints = []; isPausedForTime = false; isRunning = true;
+        cancelAnimationFrame(reqId);
+        draw();
+    });
+
+    draw();
+</script>
+</body>
+</html>

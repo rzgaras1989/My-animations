@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>زانستی خولانەوە</title>
+    <style>
+        :root {
+            --bg: #0f172a; --panel: #1e293b; --accent: #38bdf8;
+            --gold: #fbbf24; --red: #ff0000;
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--bg); color: white;
+            font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 220px 1fr 220px;
+            width: 100vw;
+            height: 100vh;
+            align-items: center;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .stat-card {
+            background: var(--panel); 
+            padding: 15px; 
+            border-radius: 12px;
+            border-top: 5px solid var(--accent); 
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .stat-card h4 { margin: 0 0 10px 0; font-size: 16px; color: #cbd5e1; }
+        .data-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; }
+
+        .center-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            background: #000; 
+            border-radius: 50%; 
+            border: 4px solid #1e293b;
+            width: 420px; height: 420px;
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 20px;
+        }
+
+        #playBtn { 
+            padding: 12px 40px; border: none; border-radius: 30px; 
+            cursor: pointer; background: var(--gold); 
+            font-weight: bold; font-size: 18px;
+        }
+
+        #fsBtn { 
+            background: transparent; border: 2px solid var(--accent); 
+            color: var(--accent); padding: 10px 20px; 
+            border-radius: 10px; cursor: pointer;
+        }
+
+        @media (max-width: 900px) {
+            .container { grid-template-columns: 160px 1fr 160px; padding: 5px; }
+            canvas { width: 280px; height: 280px; }
+            .stat-card { height: 80px; padding: 10px; }
+            .stat-card h4 { font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="app">
+    <div class="side-panel">
+        <div class="stat-card" style="border-color: var(--accent);">
+            <h4>لادان</h4>
+            <div class="data-row"><span>خاڵی A:</span><span style="color:#ef4444">کەمتر</span></div>
+            <div class="data-row"><span>خاڵی B:</span><span style="color:#22c55e">زیاتر</span></div>
+        </div>
+        <div class="stat-card" style="border-color: var(--accent);">
+            <h4>لێکەوتە خێرایی</h4>
+            <div class="data-row"><span>خاڵی A:</span><span style="color:#ef4444">هێواشتر</span></div>
+            <div class="data-row"><span>خاڵی B:</span><span style="color:#22c55e">خێراتر</span></div>
+        </div>
+        <div class="stat-card" style="border-color: var(--accent);">
+            <h4>لێکەوتە تاودان</h4>
+            <div class="data-row"><span>خاڵی A:</span><span style="color:#ef4444">کەمتر</span></div>
+            <div class="data-row"><span>خاڵی B:</span><span style="color:#22c55e">زیاتر</span></div>
+        </div>
+    </div>
+
+    <div class="center-panel">
+        <canvas id="sciFan"></canvas>
+        <div class="controls">
+            <button id="playBtn" onclick="togglePlay()">وەستان</button>
+            <button id="fsBtn" onclick="toggleFS()">پڕاوپڕ ⛶</button>
+        </div>
+    </div>
+
+    <div class="side-panel">
+        <div class="stat-card" style="border-color: var(--gold);">
+            <h4>گۆشە لادان</h4>
+            <div class="data-row"><span>خاڵی A:</span><span id="angA" style="color:var(--gold)">0°</span></div>
+            <div class="data-row"><span>خاڵی B:</span><span id="angB" style="color:var(--gold)">0°</span></div>
+        </div>
+        <div class="stat-card" style="border-color: var(--gold);">
+            <h4>گۆشە خێرایی</h4>
+            <div class="data-row"><span>A و B:</span><span style="color:var(--gold)">وەک یەک</span></div>
+        </div>
+        <div class="stat-card" style="border-color: var(--gold);">
+            <h4>گۆشە تاودان</h4>
+            <div class="data-row"><span>A و B:</span><span style="color:var(--gold)">وەک یەک</span></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('sciFan');
+    const ctx = canvas.getContext('2d');
+    let angle = 0, isRunning = true, isPaused = false, reachedPoints = [];
+    const rA = 75, rB = 185;
+
+    function init() { canvas.width = 500; canvas.height = 500; }
+    init();
+
+    function toggleFS() {
+        const app = document.getElementById('app');
+        if (!document.fullscreenElement) {
+            if (app.requestFullscreen) app.requestFullscreen();
+            else if (app.webkitRequestFullscreen) app.webkitRequestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    function togglePlay() {
+        isRunning = !isRunning;
+        document.getElementById('playBtn').innerText = isRunning ? "وەستان" : "دەستپێکردن";
+    }
+
+    function update() {
+        if (isRunning && !isPaused) {
+            angle += 0.007; // لێرەدا خێراییەکە هێواشتر کراوە
+            [Math.PI/2, Math.PI, 1.5*Math.PI, 2*Math.PI].forEach(p => {
+                if (angle >= p && !reachedPoints.includes(p)) {
+                    isPaused = true; reachedPoints.push(p);
+                    setTimeout(() => {
+                        isPaused = false;
+                        if (p >= 2*Math.PI) { angle = 0; reachedPoints = []; }
+                    }, 4000);
+                }
+            });
+        }
+        draw();
+        requestAnimationFrame(update);
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, 500, 500);
+        const cx = 250, cy = 250;
+
+        // ڕووبەرەکان
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(-Math.PI/2);
+        
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, rB, 0, angle);
+        ctx.fillStyle = "rgba(56, 189, 248, 0.15)"; ctx.fill();
+
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, rA, 0, angle);
+        ctx.fillStyle = "rgba(56, 189, 248, 0.35)"; ctx.fill();
+        ctx.restore();
+
+        // پەڕەکان
+        for (let i = 0; i < 3; i++) {
+            const a = angle + (i * 2 * Math.PI / 3);
+            ctx.save(); ctx.translate(cx, cy); ctx.rotate(a - Math.PI/2);
+            
+            ctx.beginPath(); ctx.moveTo(0,0);
+            ctx.bezierCurveTo(80, -45, 210, -25, 210, 0); 
+            ctx.bezierCurveTo(210, 25, 80, 45, 0, 0);
+            ctx.fillStyle = "rgba(30, 41, 59, 0.7)"; ctx.fill();
+            ctx.strokeStyle = "rgba(56, 189, 248, 0.8)"; ctx.lineWidth = 2; ctx.stroke();
+            
+            if (i === 0) {
+                // خاڵە سوورەکان
+                ctx.beginPath(); ctx.arc(rA, 0, 11, 0, Math.PI*2); ctx.fillStyle = "#ff0000"; ctx.fill();
+                ctx.beginPath(); ctx.arc(rB, 0, 11, 0, Math.PI*2); ctx.fillStyle = "#ff0000"; ctx.fill();
+                
+                ctx.fillStyle = "white"; ctx.font = "bold 30px Arial";
+                ctx.fillText("A", rA-10, -18); ctx.fillText("B", rB-10, -18);
+            }
+            ctx.restore();
+        }
+
+        ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI*2); ctx.fillStyle = "white"; ctx.fill();
+
+        const deg = Math.floor((angle * 180 / Math.PI) % 361);
+        document.getElementById('angA').innerText = deg + "°";
+        document.getElementById('angB').innerText = deg + "°";
+    }
+    update();
+</script>
+</body>
+</html>

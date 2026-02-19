@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>سەعاتی زانستی - Rzgar Saeed</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --accent: #38bdf8;
+            --gold: #fbbf24;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            background-color: var(--bg-color);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            overflow: hidden;
+        }
+
+        .wrapper {
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            background-color: var(--bg-color);
+        }
+
+        /* دوگمەی Fullscreen */
+        #fsBtn {
+            position: absolute;
+            top: 15px; left: 15px;
+            z-index: 100;
+            padding: 10px 15px;
+            background: rgba(56, 189, 248, 0.2);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .box {
+            background: var(--panel-bg);
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 90px;
+            border-bottom: 3px solid var(--accent);
+        }
+
+        .val { display: block; color: var(--accent); font-weight: bold; font-size: 1.1em; }
+
+        .clock-area {
+            flex: 2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            width: 100%;
+        }
+
+        canvas {
+            background: var(--panel-bg);
+            border-radius: 50%;
+            box-shadow: 0 0 40px rgba(0,0,0,0.6);
+            max-width: 95%;
+            max-height: 95%;
+        }
+
+        #timeLabel {
+            position: absolute;
+            bottom: 15%;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 20px;
+            border-radius: 25px;
+            color: var(--gold);
+            font-weight: bold;
+            font-size: 1.2em;
+            pointer-events: none;
+        }
+
+        .footer {
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btns-row { display: flex; gap: 10px; }
+        
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .mode-btn { background: #334155; color: white; }
+        .active { background: var(--accent) !important; color: #000; }
+        #playBtn { background: var(--gold); color: #000; min-width: 100px; }
+
+        .sig { color: var(--gold); font-weight: bold; font-size: 1.3em; margin-top: 5px; }
+
+        /* تێپەڕین بۆ دۆخی ئاسۆیی (Landscape) */
+        @media (orientation: landscape) {
+            .wrapper { flex-direction: row; }
+            .main-content { flex-direction: row; width: 100%; }
+            .stats { flex-direction: column; width: 140px; }
+            .footer { width: 180px; justify-content: center; }
+            .btns-row { flex-direction: column; width: 100%; }
+            #fsBtn { top: auto; bottom: 15px; left: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="wrapper" id="app">
+    <button id="fsBtn" onclick="toggleFS()">پڕاوپڕ ⛶</button>
+
+    <div class="main-content">
+        <div class="stats">
+            <div class="box"><span id="dD" class="val">0°</span><span>پلە</span></div>
+            <div class="box"><span id="rD" class="val">0π</span><span>ڕاد</span></div>
+            <div class="box"><span id="vD" class="val">0</span><span>خول</span></div>
+        </div>
+
+        <div class="clock-area">
+            <canvas id="clock"></canvas>
+            <div id="timeLabel">0 چرکە</div>
+        </div>
+
+        <div class="footer">
+            <div class="btns-row">
+                <button id="playBtn" onclick="togglePlay()">وەستان</button>
+                <button id="b-sec" class="mode-btn active" onclick="setMode('sec')">چرکە</button>
+                <button id="b-min" class="mode-btn" onclick="setMode('min')">خولەک</button>
+                <button id="b-hr" class="mode-btn" onclick="setMode('hr')">سەعات</button>
+            </div>
+            <div class="sig">BY: Rzgar Saeed</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('clock');
+    const ctx = canvas.getContext('2d');
+    let angle = 0, mode = 'sec', running = true, paused = false;
+    let reached = [];
+
+    function setup() {
+        canvas.width = 600;
+        canvas.height = 600;
+    }
+    setup();
+
+    function toggleFS() {
+        const elem = document.getElementById('app');
+        if (!document.fullscreenElement) {
+            if (elem.requestFullscreen) elem.requestFullscreen();
+            else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+            else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+            document.getElementById('fsBtn').innerText = "بچوککردنەوە";
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+            document.getElementById('fsBtn').innerText = "پڕاوپڕ ⛶";
+        }
+    }
+
+    function setMode(m) {
+        mode = m; angle = 0; reached = []; paused = false;
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('b-'+m).classList.add('active');
+    }
+
+    function togglePlay() {
+        running = !running;
+        document.getElementById('playBtn').innerText = running ? "وەستان" : "دەستپێکردن";
+    }
+
+    function animate() {
+        if (running && !paused) {
+            let speed = (mode === 'sec' ? 0.008 : mode === 'min' ? 0.005 : 0.002);
+            angle += speed;
+
+            [Math.PI/2, Math.PI, 1.5*Math.PI, 2*Math.PI].forEach(p => {
+                if (angle >= p && !reached.includes(p)) {
+                    paused = true; reached.push(p);
+                    setTimeout(() => { 
+                        paused = false; 
+                        if(p >= 2*Math.PI) { angle = 0; reached = []; }
+                    }, 4000);
+                }
+            });
+        }
+        draw();
+        requestAnimationFrame(animate);
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, 600, 600);
+        const cx = 300, cy = 300, r = 260;
+
+        // ڕەنگی شینی ئاسمانی کاڵ (#00BFFF)
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, r, -Math.PI/2, angle - Math.PI/2);
+        ctx.fillStyle = "#00BFFF33"; 
+        ctx.fill();
+
+        // چوارچێوە
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI*2);
+        ctx.strokeStyle = "rgba(255,255,255,0.15)";
+        ctx.lineWidth = 6;
+        ctx.stroke();
+
+        // نیشانەکان
+        for(let i=0; i<12; i++) {
+            let a = (i * 30 - 90) * Math.PI / 180;
+            ctx.beginPath();
+            ctx.strokeStyle = (i % 3 === 0) ? "#fbbf24" : "white";
+            ctx.lineWidth = (i % 3 === 0) ? 6 : 2;
+            ctx.moveTo(cx + (r-8)*Math.cos(a), cy + (r-8)*Math.sin(a));
+            ctx.lineTo(cx + (r-25)*Math.cos(a), cy + (r-25)*Math.sin(a));
+            ctx.stroke();
+        }
+
+        // میلی سەعات
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle - Math.PI/2);
+        ctx.beginPath();
+        ctx.strokeStyle = (mode === 'sec') ? "#ef4444" : "#38bdf8";
+        ctx.lineWidth = 7;
+        ctx.lineCap = "round";
+        ctx.moveTo(0, 0);
+        ctx.lineTo(r - 15, 0);
+        ctx.stroke();
+        
+        // سەری میلەکە
+        ctx.beginPath();
+        ctx.arc(r-15, 0, 5, 0, Math.PI*2);
+        ctx.fillStyle = (mode === 'sec') ? "#ef4444" : "#38bdf8";
+        ctx.fill();
+        ctx.restore();
+
+        // نوێکردنەوەی داتا دەرەکییەکان
+        const deg = (angle * 180 / Math.PI) % 361;
+        document.getElementById('dD').innerText = Math.floor(deg) + "°";
+        document.getElementById('rD').innerText = (angle/Math.PI).toFixed(2) + "π";
+        document.getElementById('vD').innerText = (angle/(Math.PI*2)).toFixed(2);
+        
+        let val = (angle/(Math.PI*2)) * (mode === 'hr' ? 12 : 60);
+        let unit = mode === 'sec' ? 'چرکە' : mode === 'min' ? 'خولەک' : 'سەعات';
+        document.getElementById('timeLabel').innerText = Math.floor(val) + " " + unit;
+    }
+
+    animate();
+</script>
+</body>
+</html>
